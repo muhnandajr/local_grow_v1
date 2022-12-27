@@ -1,5 +1,5 @@
 var story = {
- "docName": "Demo Station (Community)",
+ "docName": "Local Grow",
  "docPath": "P_P_P",
  "docVersion": "V_V_V",
  "ownerName": "",
@@ -19,41 +19,19 @@ var story = {
  "highlightLinks": true,
  "pages": [
   {
-   "id": "1:206",
+   "id": "79:41",
    "groupID": "0:1",
    "transAnimType": 0,
-   "title": "Desktop - Local Grow",
-   "image": "desktop-local-grow.png",
-   "imageFull": "full/desktop-local-grow.png",
+   "title": "Local Grow",
+   "image": "local-grow.png",
+   "imageFull": "local-grow.png",
    "index": 0,
    "width": 1440,
    "height": 3693,
-   "x": -271,
-   "y": -1891,
+   "x": 3786,
+   "y": 2321,
    "type": "regular",
-   "fixedPanels": [
-    {
-     "constrains": {
-      "top": false,
-      "bottom": false,
-      "left": false,
-      "right": false,
-      "height": false,
-      "width": false
-     },
-     "x": 0,
-     "y": 0,
-     "width": 1440,
-     "height": 151,
-     "type": "float",
-     "index": 0,
-     "isFloat": true,
-     "isVertScroll": false,
-     "links": [],
-     "image": "desktop-local-grow-0.png",
-     "mskH": 151
-    }
-   ],
+   "fixedPanels": [],
    "links": [
     {
      "rect": {
@@ -124,6 +102,16 @@ var story = {
      },
      "index": 6,
      "url": "https://www.instagram.com/localgrow_id/"
+    },
+    {
+     "rect": {
+      "x": 1162,
+      "y": 40,
+      "width": 143,
+      "height": 55
+     },
+     "index": 7,
+     "url": "https://calendly.com/localgrow/diagnostic"
     }
    ],
    "overlayPinPage": 6,

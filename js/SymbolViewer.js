@@ -1,20 +1,3 @@
-const ELEMENTINSPECTOR_LINUX_FONT_SIZES = {
-    "8px": "6px",
-    "10px": "7px",
-    "11px": "8px",
-    "12px": "9px",
-    "13px": "10px",
-    "15px": "11px",
-    "16px": "12px",
-    "17px": "13px",
-    "19px": "14px",
-    "20px": "15px",
-    "21px": "16px",
-    "23px": "17px",
-    "24px": "18px",
-    "25px": "19px",
-    "26px": "20px"
-}
 const ICON_TAG = " / ic-" // Use this string to find icon symbol
 const ICON_TAG2 = "ic-" // Use this string to find icon symbol
 const SUPPORT_TYPES = ["Text", "ShapePath", "Image", "ImageSymbol", "Symbol"]
@@ -257,14 +240,22 @@ class SymbolViewer extends AbstractViewer
             this.pageInfo = this.createdPages[pageIndex]
         }
         //
-        const layers = layersData[this.pageIndex].c
-        if (undefined != layers)
+        if (this.pageInfo.layerArray.length === 0)
         {
-            if (this.showSymbols)
-                this._processSymbolList(layers)
-            else
-                this._processLayerList(layers)
+            const layers = layersData[this.pageIndex].c
+            if (undefined != layers)
+            {
+                if (this.showSymbols)
+                    this._processSymbolList(layers)
+                else
+                    this._processLayerList(layers)
+            }
+            this.pageInfo.layerArray.reverse()
+            const len = this.pageInfo.layerArray.length - 1
+            this.pageInfo.layerArray.forEach(l => l.infoIndex = Math.abs(l.infoIndex - len))
         }
+        this.pageInfo.layerArray.forEach(l => viewer.symbolViewer._showElement(l))
+        //
     }
 
     _processSymbolList(layers, isParentSymbol = false)
@@ -277,7 +268,7 @@ class SymbolViewer extends AbstractViewer
                 ("" == this.currentLib || (this.currentLib != "" && l.b && l.b == this.currentLib))
             )
             {
-                this._showElement(l)
+                this._addInfoElement(l)
             }/* else
                 // l.s: symbol name
                 // l.l: style name
@@ -296,9 +287,9 @@ class SymbolViewer extends AbstractViewer
         for (var l of layers.slice().reverse())
         {
             const isIcon = l.s && l.s.indexOf(ICON_TAG) > 0;
-            if (isIcon || (SUPPORT_TYPES.indexOf(l.tp) >= 0 && !l.hd))
+            if (isIcon || (SUPPORT_TYPES.indexOf(l.tp) >= 0))
             {
-                this._showElement(l, sSI)
+                this._addInfoElement(l, sSI)
             }
             // don't go deep inside an icon
             if (isIcon) continue
@@ -308,10 +299,8 @@ class SymbolViewer extends AbstractViewer
         }
     }
 
-    _showElement(l, siLayer = null)
+    _addInfoElement(l, siLayer = null)
     {
-        if (l.hd) return
-
         var currentPanel = this.page
         l.finalX = l.x
         l.finalY = l.y
@@ -329,13 +318,6 @@ class SymbolViewer extends AbstractViewer
             }
         }
         l.parentPanel = currentPanel
-
-
-        // Check if some layer on top of current
-        for (const pl of this.pageInfo.layerArray.filter(s => s.tp != "SI"))
-        {
-            if (pl.finalX <= l.finalX && pl.finalY <= l.finalY && (pl.finalX + pl.w) >= (l.finalX + l.w) && (pl.finalY + pl.h) >= (l.finalY + l.h)) return
-        }
 
         // Check if layer is empty
         if ("Text" == l.tp)
@@ -357,15 +339,35 @@ class SymbolViewer extends AbstractViewer
             }
         }
         //
-
+        l.indexOfSO = indexOfSO
         l.infoIndex = this.pageInfo.layerArray.length
         this.pageInfo.layerArray.push(l)
+
+        // Check if some layer on top of current
+        /*for (const pl of this.pageInfo.layerArray.filter(s => s.tp != "SI" && s.infoIndex != l.infoIndex))
+        {
+            if (pl.finalX <= l.finalX && pl.finalY <= l.finalY && (pl.finalX + pl.w) >= (l.finalX + l.w) && (pl.finalY + pl.h) >= (l.finalY + l.h))
+            {
+                if (l.indeIndex < pl.infoIndex) return
+
+                const topIndex = pl.infoIndex
+                const bottomIndex = l.infoIndex
+                pl.infoIndex = bottomIndex
+                l.infoIndex = topIndex
+                this.pageInfo.layerArray[l.infoIndex] = l
+                this.pageInfo.layerArray[pl.infoIndex] = pl
+            }
+        }*/
+    }
+
+    _showElement(l, siLayer = null)
+    {
 
         var a = $("<a>", {
             class: viewer.currentPage.type === "modal" ? "modalSymbolLink" : "symbolLink",
             pi: this.pageIndex,
             li: l.infoIndex,
-            si: indexOfSO
+            si: l.indexOfSO
         })
 
         a.click(function (event)
@@ -451,7 +453,7 @@ class SymbolViewer extends AbstractViewer
             return false
         })
 
-        a.prependTo(currentPanel.linksDiv)
+        a.prependTo(l.parentPanel.linksDiv)
 
         var style = "left: " + l.finalX + "px; top:" + l.finalY + "px; "
         style += "width: " + l.w + "px; height:" + l.h + "px; "
@@ -749,7 +751,7 @@ class SymbolViewer extends AbstractViewer
         for (var l of layers.slice().reverse())
         {
             if ((!this.showSymbols || l.s != undefined) &&
-                SUPPORT_TYPES.indexOf(l.tp) >= 0 && !l.hd)
+                SUPPORT_TYPES.indexOf(l.tp) >= 0)
             {
                 if (click.x >= l.finalX && click.x <= (l.finalX + l.w) && click.y >= l.finalY && click.y <= (l.finalY + l.h))
                 {
@@ -979,12 +981,12 @@ class SymbolViewer extends AbstractViewer
         let result = ""
         let styles = {}
 
-        result += "<hr>" +
-            "<div class='block'>" +
-            "<div class='label'>CSS Styles" +
-            (1 == story.fontSizeFormat ? " (font size adjusted for Linux)" : "") +
-            "</div > " +
-            "<div class='value code'>"
+        result += `
+            <hr/>
+            <div class="block">
+            <div class="label">CSS Styles</div>
+            <div class="value code">
+        `
 
         // Decorate styles already described in CSS 
         css.split("\n").forEach(line =>
@@ -1005,7 +1007,7 @@ class SymbolViewer extends AbstractViewer
         result += this._decorateCSSOtherTokens(tokens, layer, siLayer)
 
 
-        result += "</div></div>"
+        result += `</div></div>`
         return { "css": result, "styles": styles }
     }
 
@@ -1034,7 +1036,7 @@ class SymbolViewer extends AbstractViewer
         {
             const tokenStr = tokens != null ? this._decorateStyleToken(styleName, tokens, siLayer, styleValue) : ""
             if (tokenStr === undefined) return ""
-            result += tokenStr != "" ? tokenStr : (this._formatStyleValue(styleName, styleValue) + ";")
+            result += tokenStr != "" ? tokenStr : (styleValue + ";")
         }
         //
         result += "</span>"
@@ -1088,7 +1090,7 @@ class SymbolViewer extends AbstractViewer
         const finalTokenInfo = this._findTokenValueByName(tokenName, libName, styleValue)
         //
         if (finalTokenInfo)
-            return finalTokenInfo[0] + ";</span><span class='tokenValue'>//" + this._formatStyleValue(style, finalTokenInfo[1])
+            return finalTokenInfo[0] + ";</span><span class='tokenValue'>//" + finalTokenInfo[1]
         else if (foundTokens[0].length == 3)
             return tokenName + ";</span><span class='tokenValue'>//" + foundTokens[0][2]
         else if (foundTokens[0].length == 2)
@@ -1100,21 +1102,6 @@ class SymbolViewer extends AbstractViewer
         } else
             return ""
 
-    }
-
-    _formatStyleValue(style = "font-size", styleValue = "13px")
-    {
-        if ("font-size" == style && 1 == story.fontSizeFormat)
-        {
-            if (styleValue in ELEMENTINSPECTOR_LINUX_FONT_SIZES)
-            {
-                styleValue = ELEMENTINSPECTOR_LINUX_FONT_SIZES[styleValue]
-            } else
-            {
-                styleValue = Math.round(Number(styleValue.replace("px", "")) / 1.333) + "px"
-            }
-        }
-        return styleValue
     }
 
 
